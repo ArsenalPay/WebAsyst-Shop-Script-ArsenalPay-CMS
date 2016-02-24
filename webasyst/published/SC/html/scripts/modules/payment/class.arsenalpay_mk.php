@@ -193,6 +193,8 @@ function getCustomProperties()
 			$ACCOUNT = $_POST['ACCOUNT'];
 			$STATUS = $_POST['STATUS'];
 			$DATETIME = $_POST['DATETIME'];
+			$MERCH_TYPE = $_POST['MERCH_TYPE'];
+			$AMOUNT_FULL = $_POST['AMOUNT_FULL'];
 
 			$KEY = $this->_getSettingValue('CONF_PAYMENTMODULE_ARSENALPAY_MK_SHARED_SECRET');
 
@@ -208,16 +210,19 @@ function getCustomProperties()
 					if (  $orderID && ($order = _getOrderById($orderID)) )
 					{
 						$order_amount = $order['order_amount'];
-						if( $order_amount == $AMOUNT)
+						if( $MERCH_NAME == 0 && $order_amount == $AMOUNT )
 						{
 
 							$log = "Order with id {$orderID} check";
 							$transaction_result = 'YES';
 						}
+						elseif( $MERCH_NAME == 1 && $order_amount >= $AMOUNT && $order_amount == $AMOUNT_FULL ) 
+						{
+							$log = "Order with id {$orderID} and amount {$AMOUNT} check";
+							$transaction_result = 'YES';
+						} 
 						else
 						{
-							$AMOUNT = $AMOUNT.'.00';
-
 							$log = "Order  {$orderID} amount mismatch with callback. {$AMOUNT}  in callback vs {$order_amount} in db";
 							$orderID = false;
 							$transaction_result = 'NO';
@@ -238,20 +243,28 @@ function getCustomProperties()
 					if (  $orderID && ($order = _getOrderById($orderID)) )
 					{
 						$order_amount = $order['order_amount'];
-						if( $order_amount == $AMOUNT)
+						if( $MERCH_NAME == 0 && $order_amount == $AMOUNT )
 						{
 							$log = "Order with id {$orderID} PAYMENT recieved";
 							$transaction_result = 'OK';
 							$statusID = $this->_getSettingValue('CONF_PAYMENTMODULE_ARSENALPAY_MK_ORDERSTATUS');
 							if($statusID!=-1){
-								$comment = $sys_invs_no?sprintf("Заказ оплачен по Webmoney%s. Номер счета — %s, номер платежа — %s.",($mode?' (тестовый режим)':''),$sys_invs_no,$sys_trans_no):'Заказ оплачен по WebMoney';
+								$comment = $sys_invs_no?sprintf("Заказ оплачен по ArsenalPay%s. Номер счета — %s, номер платежа — %s.",($mode?' (тестовый режим)':''),$sys_invs_no,$sys_trans_no):'Заказ оплачен по ArsenalPay';
+								ostSetOrderStatusToOrder( $orderID, $statusID,$comment,0,true);
+							}
+						}
+						elseif( $MERCH_NAME == 1 && $order_amount >= $AMOUNT && $order_amount == $AMOUNT_FULL )
+						{
+							$log = "Order with id {$orderID} and amount {$AMOUNT} PAYMENT recieved";
+							$transaction_result = 'OK';
+							$statusID = $this->_getSettingValue('CONF_PAYMENTMODULE_ARSENALPAY_MK_ORDERSTATUS');
+							if($statusID!=-1){
+								$comment = $sys_invs_no?sprintf("Заказ оплачен по ArsenalPay%s. Номер счета — %s, номер платежа — %s, сумма заказа — %s.",($mode?' (тестовый режим)':''),$sys_invs_no,$sys_trans_no, $AMOUNT):'Заказ оплачен по ArsenalPay';
 								ostSetOrderStatusToOrder( $orderID, $statusID,$comment,0,true);
 							}
 						}
 						else
 						{
-							$AMOUNT = $AMOUNT.'.00';
-
 							$log = "Order  {$orderID} amount mismatch with callback. {$AMOUNT}  in callback vs {$order_amount} in db";
 							$orderID = false;
 							$transaction_result = 'ERR';
